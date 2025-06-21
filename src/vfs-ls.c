@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    for (int i = 1; i < num_entries; i++) {
+    for (int i = 0; i < num_entries; i++) {
         struct inode file_inode;
         
         if (entries[i].inode == 0) continue;
