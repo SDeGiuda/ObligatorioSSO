@@ -72,7 +72,15 @@ struct inode root_inode;
 
         printf("[INFO] Se asignó el bloque %d al directorio raíz\n", new_block);
     }
-
+        if (read_inode(image_path, ROOTDIR_INODE, &root_inode) == 0) {
+    printf("[DEBUG] root_inode.blocks = %d\n", root_inode.blocks);
+    for (int b = 0; b < root_inode.blocks; b++) {
+        int blk = get_block_number_at(image_path, &root_inode, b);
+        printf("[DEBUG] bloque lógico %d → físico %d\n", b, blk);
+    }
+} else {
+    printf("[DEBUG] No se pudo leer el inodo raíz antes de agregar entrada\n");
+}
         //
 
         if (add_dir_entry(image_path, filename, new_inode_nbr) != 0) {
