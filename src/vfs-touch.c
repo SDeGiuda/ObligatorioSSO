@@ -49,16 +49,40 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        // intento de arreglo
+struct inode root_inode;
+    if (read_inode(image_path, ROOTDIR_INODE, &root_inode) == 0 && root_inode.blocks == 0) {
+        printf("[INFO] El directorio raíz no tiene bloques asignados. Asignando uno...\n");
+
+        int new_block = bitmap_set_first_free(image_path);
+        if (new_block < 0) {
+            fprintf(stderr, "Error: no hay bloques libres para asignar al directorio raíz\n");
+            return 1;
+        }
+
+        if (inode_append_block(image_path, &root_inode, new_block) != 0) {
+            fprintf(stderr, "Error: no se pudo agregar el bloque al directorio raíz\n");
+            return 1;
+        }
+
+        if (write_inode(image_path, ROOTDIR_INODE, &root_inode) != 0) {
+            fprintf(stderr, "Error: no se pudo guardar el inodo raíz actualizado\n");
+            return 1;
+        }
+
+        printf("[INFO] Se asignó el bloque %d al directorio raíz\n", new_block);
+    }
+
+        //
+
         if (add_dir_entry(image_path, filename, new_inode_nbr) != 0) {
             fprintf(stderr, "Error: no se pudo agregar el archivo '%s' al directorio raíz\n", filename);
             status = 1;
             continue;
         }
 
-        printf("Archivo '%s' creado exitosamente en la imagen '%s'.\n", filename, image_path);
-        // Confirmación: verificar que ahora exista
         if (dir_lookup(image_path, filename) == 0) {
-            printf("✅ Verificación: archivo '%s' aparece correctamente en el directorio.\n", filename);
+             printf("Archivo '%s' creado exitosamente en la imagen '%s'.\n", filename, image_path);
         } else {
             printf("❌ Verificación: archivo '%s' NO aparece en el directorio (algo falló).\n", filename);
 }
