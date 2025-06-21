@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
 
     for (int i = 1; i < num_entries; i++) {
         struct inode file_inode;
-
+        
+        if (entries[i].inode == 0) continue;
         if (read_inode(image_path, entries[i].inode, &file_inode) != 0) {
             fprintf(stderr, "Advertencia: no se pudo leer el inodo %u\n", entries[i].inode);
             continue;
