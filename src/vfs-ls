@@ -35,11 +35,12 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    struct dir_entry entries[num_entries];
-    if (inode_read_data(image_path, ROOTDIR_INODE, entries, root_inode.size, 0) != 0) {
-        fprintf(stderr, "Error: no se pudo leer el contenido del directorio raíz\n");
+    struct dir_entry *entries = malloc(root_inode.size);
+    if (!entries) {
+        fprintf(stderr, "Error: no se pudo asignar memoria para las entradas\n");
         return 1;
     }
+
 
     for (int i = 0; i < num_entries; i++) {
         struct inode file_inode;
