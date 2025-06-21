@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        if (dir_lookup(image_path, filename) != -1) {
+        if (dir_lookup(image_path, filename) == -1) {
             fprintf(stderr, "Error: ya existe un archivo con ese nombre: '%s'\n", filename);
             status = 1;
             continue;
