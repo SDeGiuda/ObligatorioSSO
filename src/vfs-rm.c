@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 
     const char *image_path = argv[1];
 
-    // Leer superbloque
+    // Leer y validar superbloque
     struct superblock sb;
     if (read_superblock(image_path, &sb) != 0) {
         fprintf(stderr, "Error: no se pudo leer el superbloque\n");
@@ -23,23 +23,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int status = 0;
-
+    // Iterar sobre cada archivo dado como argumento
     for (int i = 2; i < argc; i++) {
         const char *filename = argv[i];
 
         // Validar nombre
         if (!name_is_valid(filename)) {
-            fprintf(stderr, "Error: nombre de archivo inválido: '%s'\n", filename);
-            status = 1;
+            fprintf(stderr, "Error: nombre inválido '%s'\n", filename);
             continue;
         }
 
         // Buscar inodo
         int inode_nbr = dir_lookup(image_path, filename);
         if (inode_nbr == -1) {
-            fprintf(stderr, "Error: el archivo '%s' no existe\n", filename);
-            status = 1;
+            fprintf(stderr, "Error: el archivo '%s' no existe en la imagen\n", filename);
             continue;
         }
 
@@ -47,39 +44,35 @@ int main(int argc, char *argv[]) {
         struct inode file_inode;
         if (read_inode(image_path, inode_nbr, &file_inode) != 0) {
             fprintf(stderr, "Error: no se pudo leer el inodo de '%s'\n", filename);
-            status = 1;
             continue;
         }
 
+        // Verificar que sea un archivo
         if ((file_inode.mode & INODE_MODE_FILE) != INODE_MODE_FILE) {
             fprintf(stderr, "Error: '%s' no es un archivo regular\n", filename);
-            status = 1;
             continue;
         }
 
-        if (file_inode.size == 0) {
-            continue; // archivo vacío, no imprime nada
-        }
-
-        // Leer datos
-        char *buffer = malloc(file_inode.size + 1);
-        if (!buffer) {
-            fprintf(stderr, "Error: no se pudo asignar memoria para '%s'\n", filename);
-            status = 1;
+        // Truncar su contenido
+        if (inode_trunc_data(image_path, &file_inode) != 0) {
+            fprintf(stderr, "Error: no se pudo truncar '%s'\n", filename);
             continue;
         }
 
-        if (inode_read_data(image_path, inode_nbr, buffer, file_inode.size, 0) != 0) {
-            fprintf(stderr, "Error: no se pudo leer el contenido de '%s'\n", filename);
-            free(buffer);
-            status = 1;
+        // Liberar inodo
+        if (free_inode(image_path, inode_nbr) != 0) {
+            fprintf(stderr, "Error: no se pudo liberar el inodo de '%s'\n", filename);
             continue;
         }
 
-        buffer[file_inode.size] = '\0'; // aseguramos fin de string
-        printf("%s", buffer);           // mostramos el contenido
-        free(buffer);
+        // Eliminar entrada del directorio
+        if (remove_dir_entry(image_path, filename) != 0) {
+            fprintf(stderr, "Error: no se pudo eliminar '%s' del directorio\n", filename);
+            continue;
+        }
+
+        printf("Archivo '%s' eliminado correctamente.\n", filename);
     }
 
-    return status;
+    return 0;
 }
