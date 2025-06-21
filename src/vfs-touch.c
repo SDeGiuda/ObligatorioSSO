@@ -56,7 +56,12 @@ int main(int argc, char *argv[]) {
         }
 
         printf("Archivo '%s' creado exitosamente en la imagen '%s'.\n", filename, image_path);
+        // Confirmación: verificar que ahora exista
+        if (dir_lookup(image_path, filename) == 0) {
+            printf("✅ Verificación: archivo '%s' aparece correctamente en el directorio.\n", filename);
+        } else {
+            printf("❌ Verificación: archivo '%s' NO aparece en el directorio (algo falló).\n", filename);
+}
     }
-
     return status;
 }
