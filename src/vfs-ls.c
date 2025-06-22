@@ -29,29 +29,46 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int num_entries = root_inode.size / sizeof(struct dir_entry);
-    if (num_entries == 0) {
+    
+    if (root_inode.blocks == 0) {
         printf("El directorio está vacío.\n");
         return 0;
     }
 
-    struct dir_entry *entries = malloc(root_inode.size);
-    if (!entries) {
-        fprintf(stderr, "Error: no se pudo asignar memoria para las entradas\n");
-        return 1;
-    }
+    int encontrado = 0;
 
-
-    for (int i = 0; i < num_entries; i++) {
-        struct inode file_inode;
-        
-        if (entries[i].inode == 0) continue;
-        if (read_inode(image_path, entries[i].inode, &file_inode) != 0) {
-            fprintf(stderr, "Advertencia: no se pudo leer el inodo %u\n", entries[i].inode);
+    // Recorre todos los bloques del directorio raíz
+    for (int b = 0; b < root_inode.blocks; b++) {
+        int block_num = get_block_number_at(image_path, &root_inode, b);
+        if (block_num <= 0) {
+            fprintf(stderr, "Error: bloque inválido (%d) en el directorio raíz (posición lógica %d)\n", block_num, b);
             continue;
         }
 
-        print_inode(&file_inode, entries[i].inode, entries[i].name);
+        uint8_t data_buf[BLOCK_SIZE];
+        if (read_block(image_path, block_num, data_buf) != 0) {
+            fprintf(stderr, "Error: no se pudo leer el bloque %d\n", block_num);
+            continue;
+        }
+
+        struct dir_entry *entries = (struct dir_entry *)data_buf;
+
+        for (int i = 0; i < DIR_ENTRIES_PER_BLOCK; i++) {
+            if (entries[i].inode == 0) continue;
+
+            struct inode file_inode;
+            if (read_inode(image_path, entries[i].inode, &file_inode) != 0) {
+                fprintf(stderr, "Advertencia: no se pudo leer el inodo %u\n", entries[i].inode);
+                continue;
+            }
+
+            print_inode(&file_inode, entries[i].inode, entries[i].name);
+            encontrado = 1;
+        }
+    }
+
+    if (!encontrado) {
+        printf("El directorio está vacío.\n");
     }
 
     return 0;

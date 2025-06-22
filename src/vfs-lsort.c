@@ -39,38 +39,55 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int num_entries = root_inode.size / sizeof(struct dir_entry);
-    if (num_entries == 0) {
-        printf("El directorio está vacío.\n");
-        return 0;
-    }
-
-    struct dir_entry entries[num_entries];
-    if (inode_read_data(image_path, ROOTDIR_INODE, entries, root_inode.size, 0) != 0) {
-        fprintf(stderr, "Error: no se pudo leer el contenido del directorio raíz\n");
+     // Capacidad máxima basada en todos los bloques del directorio raíz
+    int max_entries = root_inode.blocks * DIR_ENTRIES_PER_BLOCK;
+    struct file_info *archivos = calloc(max_entries, sizeof(struct file_info));
+    if (!archivos) {
+        fprintf(stderr, "Error: no se pudo asignar memoria\n");
         return 1;
     }
 
-    struct file_info archivos[num_entries];
+    int count = 0;
 
-    for (int i = 0; i < num_entries; i++) {
-        archivos[i].inode_number = entries[i].inode;
-        strncpy(archivos[i].name, entries[i].name, FILENAME_MAX_LEN);
-        archivos[i].name[FILENAME_MAX_LEN - 1] = '\0';
+    // Leer todas las entradas desde los bloques del directorio raíz
+    for (int b = 0; b < root_inode.blocks; b++) {
+        int block_num = get_block_number_at(image_path, &root_inode, b);
+        if (block_num <= 0) continue;
 
-        if (read_inode(image_path, archivos[i].inode_number, &archivos[i].in) != 0) {
-            fprintf(stderr, "Advertencia: no se pudo leer el inodo %u\n", archivos[i].inode_number);
-            archivos[i].inode_number = 0; // marcar inválido
+        uint8_t data_buf[BLOCK_SIZE];
+        if (read_block(image_path, block_num, data_buf) != 0) continue;
+
+        struct dir_entry *entries = (struct dir_entry *)data_buf;
+
+        for (int i = 0; i < DIR_ENTRIES_PER_BLOCK; i++) {
+            if (entries[i].inode == 0) continue;
+
+            archivos[count].inode_number = entries[i].inode;
+            strncpy(archivos[count].name, entries[i].name, FILENAME_MAX_LEN);
+            archivos[count].name[FILENAME_MAX_LEN - 1] = '\0';
+
+            if (read_inode(image_path, archivos[count].inode_number, &archivos[count].in) != 0) {
+                archivos[count].inode_number = 0; // marcar inválido
+            }
+
+            count++;
         }
     }
 
-    qsort(archivos, num_entries, sizeof(struct file_info), cmp_name);
+    if (count == 0) {
+        printf("El directorio está vacío.\n");
+        free(archivos);
+        return 0;
+    }
 
-    for (int i = 0; i < num_entries; i++) {
+    qsort(archivos, count, sizeof(struct file_info), cmp_name);
+
+    for (int i = 0; i < count; i++) {
         if (archivos[i].inode_number != 0) {
             print_inode(&archivos[i].in, archivos[i].inode_number, archivos[i].name);
         }
     }
 
+    free(archivos);
     return 0;
 }

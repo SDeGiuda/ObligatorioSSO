@@ -51,11 +51,12 @@ int main(int argc, char *argv[]) {
 
         if (add_dir_entry(image_path, filename, new_inode_nbr) != 0) {
             fprintf(stderr, "Error: no se pudo agregar el archivo '%s' al directorio raíz\n", filename);
+            free_inode(image_path,new_inode_nbr);
             status = 1;
             continue;
         }
 
-        if (dir_lookup(image_path, filename) == 0) {
+        if (dir_lookup(image_path, filename) != 0) {
              printf("Archivo '%s' creado exitosamente en la imagen '%s'.\n", filename, image_path);
         } else {
             printf("❌ Verificación: archivo '%s' NO aparece en el directorio (algo falló).\n", filename);
