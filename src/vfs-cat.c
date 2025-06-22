@@ -69,8 +69,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
         print_inode(&file_inode, inode_nbr, filename);
-        
-        if (inode_read_data(image_path, inode_nbr, buffer, file_inode.size, 0) != 0) {
+
+        if (inode_read_data(image_path, inode_nbr, buffer, file_inode.size, 0) <= 0) {
             fprintf(stderr, "Error: no se pudo leer el contenido de '%s'\n", filename);
             free(buffer);
             status = 1;
